@@ -1,0 +1,93 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class StochasticFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public StochasticFactory() { }
+		public override IChartIndicator Create() {
+			return new Stochastic();
+		}
+		public override string Name { get { return "Stochastic"; } }
+		public override string ToString() {
+			return "Stochastic";
+		}
+	}
+	
+
+    public class Stochastic : ChartIndicator
+    {
+        StochasticConfig _config = new StochasticConfig();
+        Series[] _series = new Series[] { };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public Stochastic() { _config = new StochasticConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+        	Series slow = new Series(SeriesType.Line, "Slow Stochastic");
+        	Series signal = new Series(SeriesType.Line, "Signal LIne");
+            int total_period = _config.Period;
+            Queue<double> qa = new Queue<double>();
+            Queue<double> qb = new Queue<double>();
+            Queue<double> qs = new Queue<double>();
+            for(int i= total_period;i<series.Count;i++) {
+            	List<double> lows = new List<double>();
+            	List<double> highs = new List<double>();
+            	for(int j=0;j<_config.Period;j++) {
+            		lows.Add(series[i - j].Low);
+            		highs.Add(series[i - j].High);
+            	}
+            	double current = series[i].Close;
+            	double a = current - lows.Min();
+            	double b = highs.Max() - lows.Min();
+            	double k = (a / b) * 100;
+            	qa.Enqueue(a);
+            	qb.Enqueue(b);
+            	if(qa.Count == _config.SlowPeriod) {
+            		double slow_stochastic = (qa.Sum() / qb.Sum()) * 100;
+            		qs.Enqueue(slow_stochastic);
+            		qa.Dequeue();
+            		qb.Dequeue();
+            		slow.Add(new Element(series[i].Stamp, slow_stochastic));
+            	}
+            	if(qs.Count == _config.SignalPeriod) {
+            		double s = qs.Average();
+            		signal.Add(new Element(series[i].Stamp, s));
+            		qs.Dequeue();
+            	}
+            	
+            }
+            _series = new Series[] { slow, signal };
+            return new double[] { };
+        }
+
+        public override string ToString() {
+            return "Stochastic";
+        }
+    }
+
+    public class StochasticConfig 
+    {
+        int _period = 11;
+        int _slow_period = 3;
+        int _signal_period = 3;
+	    public StochasticConfig() {  }
+	    [DefaultValue(11)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+        public int SlowPeriod { get { return _slow_period; } set { _slow_period = value; } }
+        public int SignalPeriod { get { return _signal_period; } set { _signal_period = value; } }
+    }
+
+}

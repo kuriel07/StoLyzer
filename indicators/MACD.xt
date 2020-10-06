@@ -1,0 +1,89 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class MACDFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public MACDFactory() { }
+		public override IChartIndicator Create() {
+			return new MACD();
+		}
+		public override string Name { get { return "MACD"; } }
+		public override string ToString() {
+			return "MACD";
+		}
+	}
+	
+
+    public class MACD : ChartIndicator
+    {
+        MACDConfig _config = new MACDConfig();
+        Series[] _series = new Series[] { };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public MACD() { _config = new MACDConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+            double ema12 = 0;
+            double ema26 = 0;
+            double ema9 = 0;
+            double[] ema12_v = new double[12];
+            double[] ema26_v = new double[26];
+            double[] ema9_v = new double[9];
+            int ema9_index = 0;
+		Series macd_series = new Series(SeriesType.Line, "MACD 1226" );
+		Series ema9_series = new Series(SeriesType.Line, "EMA9" );
+            //foreach(Element e in series) {
+            double macd = 0;
+            for(int i=0;i<series.Count;i++) {
+            		IElement e = series[i];
+            		ema12_v[i%12] = e.Close;
+            		ema26_v[i%26] = e.Close;
+            		if(i >= 12) {
+            			ema12 = (e.Close - ema12_v.Average()) * 0.1538 + ema12_v.Average();
+            			ema12_v[i%12] = ema12;
+            		}
+            		if(i >= 26) {
+            			ema26 = (e.Close - ema26_v.Average()) * 0.0741 + ema26_v.Average();
+            			ema26_v[i%26] = ema26;
+            			macd = ema12 - ema26;
+				macd_series.Add(new Element(e.Stamp, macd));
+            			ema9_v[ema9_index % 9] = macd;
+            			if(ema9_index >= 9) {
+            				ema9 = (macd - ema9_v.Average()) * 0.2 + ema9_v.Average();
+            				ema9_v[ema9_index % 9] = ema9;
+					ema9_series.Add(new Element(e.Stamp, ema9));
+            			}
+            			ema9_index++;
+            		}
+		}
+		_series = new Series[] { macd_series, ema9_series  };
+            return new double[] { macd, ema9 };
+        }
+
+        public override string ToString() {
+            return "MACD";
+        }
+    }
+
+    public class MACDConfig 
+    {
+        int _period = 20;
+	    public MACDConfig() {  }
+	    [DefaultValue(20)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

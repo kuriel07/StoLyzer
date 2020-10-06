@@ -1,0 +1,83 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class ATRFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public ATRFactory() { }
+		public override IChartIndicator Create() {
+			return new ATR();
+		}
+		public override string Name { get { return "ATR"; } }
+		public override string ToString() {
+			return "ATR";
+		}
+	}
+	
+
+    public class ATR : ChartIndicator
+    {
+        ATRConfig _config = new ATRConfig();
+        Series[] _series = new Series[] { };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public ATR() { _config = new ATRConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+        	double average = 0;
+        	Queue<Element> queue = new Queue<Element>();
+        	Series atr = new Series(SeriesType.Line, String.Format("ATR{0}", this._config.Period) );
+			Element prev = null;
+			foreach(Element e in series) {
+				queue.Enqueue(e);
+				if(queue.Count == this._config.Period) {
+					double sum = 0;
+					Element[] elems = queue.ToArray();
+					prev = null;
+					for(int i=0;i<elems.Length;i++) {
+						double max1 = Math.Abs(elems[i].High - elems[i].Low);
+						if(prev != null) {
+							double max2 = Math.Abs(elems[i].High - prev.Close);
+							double max3 = Math.Abs(elems[i].Low - prev.Close);
+							double [] max_array = new double[] { max1, max2, max3 };
+							sum += max_array.Max();
+						} else {
+							sum += max1;
+						}
+						prev = elems[i];
+					}
+					average = sum / this._config.Period;
+					atr.Add(new Element(e.Stamp, average));
+					queue.Dequeue();
+				}
+			}
+			_series = new Series[] { atr };
+			return new double[] { average };
+        }
+
+        public override string ToString() {
+            return "ATR";
+        }
+    }
+
+    public class ATRConfig 
+    {
+        int _period = 14;
+	    public ATRConfig() {  }
+	    [DefaultValue(14)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

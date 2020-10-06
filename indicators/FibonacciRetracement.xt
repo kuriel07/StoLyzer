@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class FibonacciRetracementFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public FibonacciRetracementFactory() { }
+		public override IChartIndicator Create() {
+			return new FibonacciRetracement();
+		}
+		public override string Name { get { return "FibonacciRetracement"; } }
+		public override string ToString() {
+			return "Fibonacci Retracement";
+		}
+	}
+	
+
+    public class FibonacciRetracement : ChartIndicator
+    {
+        FibonacciRetracementConfig _config = new FibonacciRetracementConfig();
+        Series[] _series = new Series[] { };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public FibonacciRetracement() { _config = new FibonacciRetracementConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+            Series s1 = new Series (SeriesType.Line, series, "Fib0");
+            Series s2 = new Series (SeriesType.Line, series, "Fib382");
+            Series s3 = new Series (SeriesType.Line, series, "Fib500");
+            Series s4 = new Series (SeriesType.Line, series, "Fib618");
+            double max = series.GetYMax();
+            s1.AddRange(new Element[] { new Element(series[0].Stamp, max), new Element(series[series.Count -1].Stamp, max) });
+            s2.AddRange(new Element[] { new Element(series[0].Stamp, max * 0.618), new Element(series[series.Count -1].Stamp, max * 0.618) });
+            s3.AddRange(new Element[] { new Element(series[0].Stamp, max * 0.5), new Element(series[series.Count -1].Stamp, max * 0.5) });
+            s4.AddRange(new Element[] { new Element(series[0].Stamp, max * 0.382), new Element(series[series.Count -1].Stamp, max * 0.382) });
+            s2.Name = String.Format("Fib{0}", max * 0.618);
+            s3.Name = String.Format("Fib{0}", max * 0.5);
+            s4.Name = String.Format("Fib{0}", max * 0.382);
+            
+            _series = new Series[] { s1, s2, s3, s4 };
+            
+            return new double[] { };
+        }
+
+        public override string ToString() {
+            return "Fibonacci Retracement";
+        }
+    }
+
+    public class FibonacciRetracementConfig 
+    {
+        int _period = 20;
+	    public FibonacciRetracementConfig() {  }
+	    [DefaultValue(20)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

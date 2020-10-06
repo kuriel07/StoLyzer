@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class MovingAverageFactory : ChartIndicatorFactory, IChartIndicatorFactory {
+		public MovingAverageFactory() { }
+		public override IChartIndicator Create() {
+			return new MovingAverage();
+		}
+		public override string Name { get { return "MovingAverage"; } }
+		public override string ToString() {
+			return "Moving Average";
+		}
+	}
+	
+    public class MovingAverage : ChartIndicator
+    {
+        MovingAverageConfig _config = new MovingAverageConfig();
+        Series[] _series;
+        
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public MovingAverage() { _config = new MovingAverageConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+        	double average = 0;
+        	Queue<Element> queue = new Queue<Element>();
+        	Series maverages = new Series(SeriesType.Line, series, String.Format("MA{0}", this._config.Period) );
+		foreach(Element e in series) {
+			queue.Enqueue(e);
+			if(queue.Count == this._config.Period) {
+				double sum = 0;
+				Element[] elems = queue.ToArray();
+				for(int i=0;i<elems.Length;i++) {
+					sum += elems[i].Close;
+				}
+				average = sum / this._config.Period;
+				maverages.Add(new Element(e.Stamp, average));
+				queue.Dequeue();
+			}
+		}
+		_series = new Series[] { maverages };
+		return new double[] { average };
+        }
+
+        public override string ToString() {
+            return "Moving Average";
+        }
+    }
+
+    public class MovingAverageConfig : IChartIndicatorConfig
+    {
+    	 int _period = 20;
+	 public MovingAverageConfig() {  }
+	 [DefaultValue(20)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

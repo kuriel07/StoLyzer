@@ -1,0 +1,71 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class RelativeBandFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public RelativeBandFactory() { }
+		public override IChartIndicator Create() {
+			return new RelativeBand();
+		}
+		public override string Name { get { return "RelativeBand"; } }
+		public override string ToString() {
+			return "RelativeBand";
+		}
+	}
+	
+
+    public class RelativeBand : ChartIndicator
+    {
+        RelativeBandConfig _config = new RelativeBandConfig();
+        Series[] _series = new Series[] { };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public RelativeBand() { _config = new RelativeBandConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+        	if(series.Count == 0) return new double[] { 0 };
+        	Series line1 = new Series(SeriesType.Scatter, series, "Minima");
+        	Series line2 = new Series(SeriesType.Scatter, series, "Maxima");
+            IElement e = series[0];
+            IElement maxima = e;
+        	IElement minima = e;
+        	double local_minima = e.Low;
+        	double local_maxima = e.High;
+            while((minima = series.GetLocalMin(minima)) != null ) {
+            		line1.Add(minima);
+            }
+            while((maxima = series.GetLocalMax(maxima)) != null ) {
+            		line2.Add(maxima);
+            }
+            _series = new Series[] { line1, line2 };
+            
+            return new double[] { local_minima, local_maxima }; 
+        }
+
+        public override string ToString() {
+            return "RelativeBand";
+        }
+    }
+
+    public class RelativeBandConfig 
+    {
+        int _period = 20;
+	    public RelativeBandConfig() {  }
+	    [DefaultValue(20)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

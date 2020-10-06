@@ -1,0 +1,97 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class IchimokuFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public IchimokuFactory() { }
+		public override IChartIndicator Create() {
+			return new Ichimoku();
+		}
+		public override string Name { get { return "Ichimoku"; } }
+		public override string ToString() {
+			return "Ichimoku";
+		}
+	}
+	
+    public class Ichimoku : ChartIndicator
+    {
+        IchimokuConfig _config = new IchimokuConfig();
+        Series[] _series = new Series[] { };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+
+        public Ichimoku() { _config = new IchimokuConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+            double[] high9 = new double[9];
+            double[] low9 = new double[9];
+            double[] high26 = new double[26];
+            double[] low26 = new double[26];
+            double[] high52 = new double[52];
+            double[] low52 = new double[52];
+            double turning_line = 0;
+            double standard_line = 0;
+            double leading_span1 = 0;
+            double leading_span2 = 0;
+            //double cloud = 0;
+            Series TurningLine = new Series(SeriesType.Line, series, "Tenkan-Sen");
+            Series StandardLine = new Series(SeriesType.Line, series, "Kijun-Sen");
+            Series Cloud = new Series(SeriesType.Delta, series, "Kumo");
+
+            for (int i = 0; i < series.Count; i++)
+            {
+                IElement e = series[i];
+                high9[i % 9] = e.Close;
+                low9[i % 9] = e.Close;
+                high26[i % 26] = e.Close;
+                low26[i % 26] = e.Close;
+                high52[i % 52] = e.Close;
+                low52[i % 52] = e.Close;
+                if (i >= 9)
+                {
+                    turning_line = (high9.Max() + low9.Min()) / 2;
+                }
+                if (i >= 52)
+                {
+                    leading_span2 = (high52.Max() + low52.Min()) / 2;
+                    Cloud.Add(new Element(e.Stamp + new TimeSpan(26, 0, 0, 0), leading_span1, leading_span2));
+                }
+                if (i >= 26)
+                {
+                    standard_line = (high26.Max() + low26.Min()) / 2;
+                    leading_span1 = (standard_line + turning_line) / 2;
+                    TurningLine.Add(new Element(e.Stamp, turning_line));
+                    StandardLine.Add(new Element(e.Stamp, standard_line));
+                }
+            }
+            _series = new Series[] { TurningLine, StandardLine, Cloud };
+            return new double[] { turning_line, standard_line, leading_span1, leading_span2 };
+        }
+
+        public override string ToString()
+        {
+            return "Ichimoku";
+        }
+    }
+
+    public class IchimokuConfig
+    {
+        int _period = 26;
+        public IchimokuConfig() { }
+        [DefaultValue(26)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

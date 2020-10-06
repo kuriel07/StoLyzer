@@ -1,0 +1,108 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class BollingerBandFactory : ChartIndicatorFactory, IChartIndicatorFactory {
+		public BollingerBandFactory() { }
+		public override IChartIndicator Create() {
+			return new BollingerBand();
+		}
+		public override string Name { get { return "BollingerBand"; } }
+		public override string ToString() {
+			return "Bollinger Band";
+		}
+	}
+	
+    public class BollingerBand : ChartIndicator
+    {
+        BollingerBandConfig _config = new BollingerBandConfig();
+        Series[] _series;
+        
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public BollingerBand() { _config = new BollingerBandConfig(); }
+        
+        public static double StandardDeviation(IEnumerable<double> values, bool as_sample)
+	 {
+    		// Get the mean.
+    		double mean = values.Sum() / values.Count();
+
+    		// Get the sum of the squares of the differences
+    		// between the values and the mean.
+    		var squares_query =
+        	from double value in values
+        	select (value - mean) * (value - mean);
+    		double sum_of_squares = squares_query.Sum();
+
+    		if (as_sample)
+    		{
+        		return Math.Sqrt(sum_of_squares / (values.Count() - 1));
+    		}
+    		else
+    		{
+        		return Math.Sqrt(sum_of_squares / values.Count());
+    		}
+	}
+    	 
+        public override double[] Calculate(Series series)
+        {
+        	Queue<Element> queue = new Queue<Element>();
+        	double upper_band = 0, lower_band = 0;
+        	Series maverages = new Series(SeriesType.Delta, series, String.Format("BB{0}", this._config.Period) );
+		foreach(Element e in series) {
+			queue.Enqueue(e);
+			if(queue.Count == this._config.Period) {
+				double average_high, sum_high = 0;
+				double stdevh = 0, stdevl = 0;
+				double average_low, sum_low = 0;
+				Element[] elems = queue.ToArray();
+				double[] ds = new double[elems.Length];
+				double[] dh = new double[elems.Length];
+				for(int i=0;i<elems.Length;i++) {
+					sum_high += elems[i].Close;	// + elems[i].Close) / 2;
+					sum_low += elems[i].Low;
+					ds[i] = elems[i].Low;
+					dh[i] = elems[i].Close;
+					//sum_low += elems[i].Low;
+				}
+				stdevl = StandardDeviation(ds, false);
+				stdevh = StandardDeviation(dh, false);
+				average_low = sum_low / this._config.Period;
+				average_high = sum_high / this._config.Period;
+				upper_band = average_high + (stdevh * 2);
+				lower_band = average_low - (stdevl * 2);
+				//Console.WriteLine(String.Format("{0} - {1}", upper_band, lower_band));
+				//average_low = sum_low / this._config.Period;
+				Element w = queue.Dequeue();
+				//queue.Dequeue();
+				maverages.Add(new Element(e.Stamp,  upper_band, lower_band ));
+			}
+		}
+		_series = new Series[] { maverages };
+		return new double[] {  upper_band, lower_band };
+        }
+
+        public override string ToString() {
+            return "Bollinger Band";
+        }
+    }
+
+    public class BollingerBandConfig : IChartIndicatorConfig
+    {
+    	 int _period = 20;
+	 public BollingerBandConfig() {  }
+	 [DefaultValue(20)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}

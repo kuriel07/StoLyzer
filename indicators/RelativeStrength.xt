@@ -1,0 +1,78 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Indicators {
+
+	public class RelativeStrengthFactory : ChartIndicatorFactory, IChartIndicatorFactory 
+    {
+		public RelativeStrengthFactory() { }
+		public override IChartIndicator Create() {
+			return new RelativeStrength();
+		}
+		public override string Name { get { return "RelativeStrength"; } }
+		public override string ToString() {
+			return "Relative Strength";
+		}
+	}
+	
+
+    public class RelativeStrength : ChartIndicator
+    {
+        RelativeStrengthConfig _config = new RelativeStrengthConfig();
+        Series[] _series = new Series[]{  };
+
+        public override object Config { get { return _config; } }
+        public override Series[] Series { get { return _series; } set { _series = value; } }
+        
+        public RelativeStrength() { _config = new RelativeStrengthConfig(); }
+
+        public override double[] Calculate(Series series)
+        {
+        	int period = _config.Period;
+		double[] upward_movement = new double[_config.Period];
+		double[] downward_movement = new double[_config.Period];
+        	Series maverages = new Series(SeriesType.Line, String.Format("RS{0}", this._config.Period) );
+		//foreach(Element e in series) {
+		double rsi = 0;
+		for(int i=1;i<series.Count;i++) {
+			double temp = series[i].Close - series[i-1].Close;
+			upward_movement[i%period] = 0;
+			downward_movement[i%period] = 0;
+			if(temp > 0) upward_movement[i%period] = temp;
+			if(temp < 0) downward_movement[i%period] = Math.Abs(temp);
+			if(i> period) {
+				double avg_up = upward_movement.Average();
+				double avg_down = downward_movement.Average();
+				double strength = avg_up / avg_down;
+				rsi = 100 - (100 / strength);
+				
+				maverages.Add(new Element(series[i].Stamp, rsi));
+			}
+		}
+		
+		_series = new Series[] { maverages };
+		return new double[] { rsi };
+        }
+
+        public override string ToString() {
+            return "Relative Strength";
+        }
+    }
+
+    public class RelativeStrengthConfig : IChartIndicatorConfig
+    {
+        int _period = 20;
+	    public RelativeStrengthConfig() {  }
+	    [DefaultValue(20)]
+        [DisplayName("Period")]
+        public int Period { get { return _period; } set { _period = value; } }
+    }
+
+}
