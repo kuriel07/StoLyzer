@@ -42,7 +42,7 @@ namespace Stolyzer.Indicators {
 		//foreach(Element e in series) {
 		double rsi = 0;
 		for(int i=1;i<series.Count;i++) {
-			double temp = series[i].Close - series[i-1].Close;
+			double temp = (series[i].Close - series[i-1].Close) / series[i-1].Close;
 			upward_movement[i%period] = 0;
 			downward_movement[i%period] = 0;
 			if(temp > 0) upward_movement[i%period] = temp;
@@ -51,7 +51,7 @@ namespace Stolyzer.Indicators {
 				double avg_up = upward_movement.Average();
 				double avg_down = downward_movement.Average();
 				double strength = avg_up / avg_down;
-				rsi = 100 - (100 / strength);
+				rsi = 100 - (100 / (strength + 1));
 				
 				maverages.Add(new Element(series[i].Stamp, rsi));
 			}
