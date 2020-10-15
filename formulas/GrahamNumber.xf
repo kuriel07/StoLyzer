@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Formulas {
+
+	public class GrahamNumber : Formula 
+	{
+		
+        public GrahamNumber() {
+
+		}
+
+        public override double Calculate(double[] fields)
+        {
+		        double price = fields[0];               //last price
+                double change = fields[1];              //change price from previous
+                double alltime_high = fields[2];        //highest price historical
+                double alltime_low = fields[3];         //lowest price historical
+                double pbv = fields[4];                 //price per-book value
+                double per = fields[5];                 //price earning ratio
+                double roe = fields[6];                 //return on equity relative to current price
+                double market_cap = fields[7];          //market capitalization
+                double dividend_rate = fields[8];       //last dividend rate
+                double dividend_yield = fields[9];      //last dividend yield relative to current price
+                double der = fields[10];                //debt equity ratio
+                double cps = fields[11];                //cash per-share
+                double earning_growth = fields[12];     //earning growth historical
+                double avg_volume = fields[13];         //average transaction volume
+                double book_value = price / pbv;        //actual book value
+                double eps = price / per;               //actual earning per-share
+                
+				ForeColor = Color.White;
+				if(per < 0.1) return 0;
+				if(pbv < 0.1) return 0;
+				double graham_number = Math.Sqrt(22.5 * eps * book_value);
+				ForeColor = (price < graham_number)? Color.Lime: Color.Tomato;
+				return graham_number;
+        }
+
+        public override string Name {
+            get { return "Graham Number"; }
+        }
+
+        public override string ToString() {
+            return "Graham Number";
+        }
+	}
+}

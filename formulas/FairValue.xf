@@ -1,0 +1,58 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.ComponentModel;
+using System.IO;
+using Stolyzer.Framework;
+
+namespace Stolyzer.Formulas {
+
+	public class FairValue : Formula 
+	{
+		
+        public FairValue() {
+
+		}
+
+        public override double Calculate(double[] fields)
+        {
+		        double price = fields[0];               //last price
+                double change = fields[1];              //change price from previous
+                double alltime_high = fields[2];        //highest price historical
+                double alltime_low = fields[3];         //lowest price historical
+                double pbv = fields[4];                 //price per-book value
+                double per = fields[5];                 //price earning ratio
+                double roe = fields[6];                 //return on equity relative to current price
+                double market_cap = fields[7];          //market capitalization
+                double dividend_rate = fields[8];       //last dividend rate
+                double dividend_yield = fields[9];      //last dividend yield relative to current price
+                double der = fields[10];                //debt equity ratio
+                double cps = fields[11];                //cash per-share
+                double earning_growth = fields[12];     //earning growth historical
+                double avg_volume = fields[13];         //average transaction volume
+                double book_value = price / pbv;        //actual book value
+                double eps = price / per;               //actual earning per-share
+
+                ForeColor = Color.White;
+				if(pbv < 0.1) return 0;					//invalid pbv
+				if(earning_growth < 0.01) return 0;
+				//return (earning_growth / 100);
+				double fair_value = (8.5 * (per + (2*(earning_growth / 100)))*4.4 / 2.84);
+				
+				//double fair_value = Math.Pow(eps * (1 + (earning_growth / 100)), 5) / 2;		//use margin of safety 50%
+				ForeColor = (price < fair_value)? Color.Lime: Color.Tomato;
+                return fair_value;
+        }
+
+        public override string Name {
+            get { return "Fair Value"; }
+        }
+
+        public override string ToString() {
+            return "Fair Value";
+        }
+	}
+}
