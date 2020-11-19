@@ -33,11 +33,14 @@ namespace Stolyzer.Indicators {
         
         public MACD() { _config = new MACDConfig(); }
 
+    	 [ReturnDescription(new string[] { "current macd", "current ema9"})]
         public override double[] Calculate(Series series)
         {
             double ema12 = 0;
             double ema26 = 0;
             double ema9 = 0;
+            double prev_ema12=0;
+            double prev_ema26=0;
             double[] ema12_v = new double[12];
             double[] ema26_v = new double[26];
             double[] ema9_v = new double[9];
@@ -51,14 +54,20 @@ namespace Stolyzer.Indicators {
             		ema12_v[i%12] = e.Close;
             		ema26_v[i%26] = e.Close;
             		if(i >= 12) {
-            			ema12 = (e.Close - ema12_v.Average()) * 0.1538 + ema12_v.Average();
+            			if(i == 12) prev_ema12 = ema12_v.Average();
+            			ema12 = (e.Close - prev_ema12) * 0.1538 + prev_ema12;
             			ema12_v[i%12] = ema12;
+            			prev_ema12 = ema12;
             		}
             		if(i >= 26) {
-            			ema26 = (e.Close - ema26_v.Average()) * 0.0741 + ema26_v.Average();
+            			if(i == 26) prev_ema26 = ema26_v.Average();
+            			ema26 = (e.Close - prev_ema26) * 0.0741 + prev_ema26;
             			ema26_v[i%26] = ema26;
+            			prev_ema26 = ema26;
+            		}
+            		if(i >= 26) {
             			macd = ema12 - ema26;
-				macd_series.Add(new Element(e.Stamp, macd));
+						macd_series.Add(new Element(e.Stamp, macd));
             			ema9_v[ema9_index % 9] = macd;
             			if(ema9_index >= 9) {
             				ema9 = (macd - ema9_v.Average()) * 0.2 + ema9_v.Average();
@@ -77,7 +86,7 @@ namespace Stolyzer.Indicators {
         }
     }
 
-    public class MACDConfig 
+    public class MACDConfig  : IChartIndicatorConfig
     {
         int _period = 20;
 	    public MACDConfig() {  }

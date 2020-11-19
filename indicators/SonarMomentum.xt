@@ -38,6 +38,7 @@ namespace Stolyzer.Indicators {
         {
             double ema20 = 0;
             double ema9 = 0;
+            double prev_ema20 = 0;
             double[] ema20_v = new double[20];
             double[] ema9_v = new double[9];
             int ema9_index = 0;
@@ -49,7 +50,8 @@ namespace Stolyzer.Indicators {
             		IElement e = series[i];
             		ema20_v[i%20] = e.Close;
             		if(i >= 20) {
-            			ema20 = (e.Close - ema20_v.Average()) * _config.alpha + ema20_v.Average();
+            			if(i == 20) prev_ema20 = ema20_v.Average();
+            			ema20 = (e.Close - prev_ema20) * _config.alpha + prev_ema20;
             			ema20_v[i%20] = ema20;
             			macd = ema20;
 						macd_series.Add(new Element(e.Stamp, macd));
@@ -73,9 +75,9 @@ namespace Stolyzer.Indicators {
 
     public class SonarMomentumConfig
     {
-    	public SonarMomentumConfig() { alpha=0.1; }
+    	public SonarMomentumConfig() { alpha=0.952; }
     	
-    	[DefaultValue(0.1)]
+    	[DefaultValue(0.952)]
     	[DisplayName("Alpha")]
     	public double alpha{ get; set; }
     }
