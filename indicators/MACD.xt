@@ -39,6 +39,7 @@ namespace Stolyzer.Indicators {
             double ema12 = 0;
             double ema26 = 0;
             double ema9 = 0;
+            double prev_ema9 =0;
             double prev_ema12=0;
             double prev_ema26=0;
             double[] ema12_v = new double[12];
@@ -70,9 +71,11 @@ namespace Stolyzer.Indicators {
 						macd_series.Add(new Element(e.Stamp, macd));
             			ema9_v[ema9_index % 9] = macd;
             			if(ema9_index >= 9) {
-            				ema9 = (macd - ema9_v.Average()) * 0.2 + ema9_v.Average();
+            				if(ema9_index == 9) prev_ema9 = ema9_v.Average();
+            				ema9 = (macd - prev_ema9) * 0.2 + prev_ema9;
             				ema9_v[ema9_index % 9] = ema9;
-					ema9_series.Add(new Element(e.Stamp, ema9));
+            				prev_ema9 = ema9;
+							ema9_series.Add(new Element(e.Stamp, ema9));
             			}
             			ema9_index++;
             		}
